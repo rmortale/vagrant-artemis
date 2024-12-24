@@ -2,18 +2,54 @@
   hosts: localhost
   vars:
     broker_xml: /home/vagrant/artemis_instance/etc/broker.xml
+    broker_name: aqs001d
+    queues:
+      - queue1
+      - queue2
+      - queue3
 
   tasks:
-    - name: Add transport connectors to broker.xml
+    - name: Change broker name
       xml:
         path: "{{ broker_xml }}"
-        xpath: /broker/transportConnectors
+        xpath: /config:configuration/core:core/core:name
+        pretty_print: yes
         namespaces:
-          x: "http://activemq.apache.org/schema/core"
-        content: |
-          <transportConnector name="openwire" uri="tcp://0.0.0.0:61616"/>
-          <transportConnector name="amqp" uri="amqp://0.0.0.0:5672"/>
-          <transportConnector name="stomp" uri="stomp://0.0.0.0:61613"/>
-          <transportConnector name="mqtt" uri="mqtt://0.0.0.0:1883"/>
-          <transportConnector name="ws" uri="ws://0.0.0.0:61614"/>
+          config: "urn:activemq"
+          core: "urn:activemq:core"
+        value: "{{ broker_name }}"
+
+    - name: create queue list
+      set_fact:
+        #addresses: "{{ addresses | default([]) + [ '<address name='{{ item }}'><anycast><queue name='{{ item }}'></queue></anycast></address>' ] }}"
+        addresses: "{{ queues | map("hello") | list }}"
+     
+
+    - name: Print queue list
+      debug: var=addresses
+    # - name: Remove all addresses first
+    #   xml:
+    #     path: "{{ broker_xml }}"
+    #     xpath: /config:configuration/core:core/core:addresses
+    #     pretty_print: yes
+    #     namespaces:
+    #       config: "urn:activemq"
+    #       core: "urn:activemq:core"
+    #     set_children: []
+
+    - name: Add addresses
+      xml:
+        path: "{{ broker_xml }}"
+        xpath: /config:configuration/core:core/core:addresses
+        pretty_print: yes
+        input_type: xml
+        namespaces:
+          config: "urn:activemq"
+          core: "urn:activemq:core"
+        set_children:
+          "{{ addresses }}"
+          #"{{ queues }}"
+      
           
+         
+              

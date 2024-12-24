@@ -1,0 +1,19 @@
+- name: Install Apache Artemis
+  hosts: localhost
+  vars:
+    broker_xml: /home/vagrant/artemis_instance/etc/broker.xml
+
+  tasks:
+    - name: Add transport connectors to broker.xml
+      xml:
+        path: "{{ broker_xml }}"
+        xpath: /broker/transportConnectors
+        namespaces:
+          x: "http://activemq.apache.org/schema/core"
+        content: |
+          <transportConnector name="openwire" uri="tcp://0.0.0.0:61616"/>
+          <transportConnector name="amqp" uri="amqp://0.0.0.0:5672"/>
+          <transportConnector name="stomp" uri="stomp://0.0.0.0:61613"/>
+          <transportConnector name="mqtt" uri="mqtt://0.0.0.0:1883"/>
+          <transportConnector name="ws" uri="ws://0.0.0.0:61614"/>
+          

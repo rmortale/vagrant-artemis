@@ -1,0 +1,63 @@
+- name: Install Apache Artemis
+  hosts: all
+
+  tasks:
+    - name: ensure openjdk and zip are installed
+      become: true
+      apt:
+        pkg:
+          - openjdk-17-jdk-headless
+
+    - name: Extract Apache Artemis
+      unarchive:
+        src: https://archive.apache.org/dist/activemq/activemq-artemis/2.39.0/apache-artemis-2.39.0-bin.tar.gz
+        dest: /home/vagrant
+        remote_src: yes
+        owner: vagrant
+        group: vagrant
+        creates: /home/vagrant/apache-artemis-2.39.0
+        #mode: 0755
+
+    - name: Create Artemis instance
+      command: /home/vagrant/apache-artemis-2.39.0/bin/artemis create /home/vagrant/artemis_instance --user artemis --password artemis --require-login
+      become_user: vagrant
+      args:
+        creates: /home/vagrant/artemis_instance
+
+    - name: Create systemd service for Apache Artemis
+      become: true
+      copy:
+        dest: /etc/systemd/system/artemis.service
+        content: |
+          [Unit]
+          Description=Apache Artemis
+          After=network.target
+
+          [Service]
+          Type=forking
+          ExecStart=/home/vagrant/artemis_instance/bin/artemis-service start
+          ExecStop=/home/vagrant/artemis_instance/bin/artemis-service stop
+          RestartSec=15
+          User=vagrant
+          Group=vagrant
+          Restart=on-failure
+          # A workaround for Java signal handling
+          SuccessExitStatus=143
+
+          [Install]
+          WantedBy=multi-user.target
+
+    - name: Reload systemd
+      become: true
+      systemd:
+        daemon_reload: yes
+
+    - name: Enable and start Apache Artemis service
+      become: true
+      systemd:
+        name: artemis
+        enabled: yes
+        state: started
+
+
+   
